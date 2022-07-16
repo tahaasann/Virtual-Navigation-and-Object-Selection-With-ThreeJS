@@ -1,0 +1,221 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <title>Oturma Plan</title>
+    <link href="/Project/css/style.css" rel="stylesheet" />
+
+</head>
+<body>
+    <div id="container"></div>
+
+    <script src="/Project/js/three.min.js"></script>
+    <script src="/Project/js/tween.min.js"></script>
+    <script src="/Project/js/dat-gui.min.js"></script>
+    <script src="/Project/js/controls/OrbitControls.min.js"></script>
+    <script src="/Project/js/controls/firstpersoncontrol.min.js"></script>
+    <script src="/Project/js/loaders/GLTFLoader.min.js"></script>
+    <script>
+      var etkinlikKoltuk = [
+          {
+              "Id": 17482
+          },
+          {
+              "Id": 17452
+          },
+            {
+                "Id": 17422
+            }
+      ];
+      var gui = new dat.gui.GUI({
+          width:150
+      });//control için
+
+      var datObj = {
+           cameraBtn:function(){
+
+           }
+        };
+       /*gui.add(datObj,'cameraBtn')
+       .name('Sahneyi Gör').listen();
+        */
+
+      var container = document.getElementById('container'),
+          containerWidth, containerHeight,
+          scene,
+          camera,
+          controls;
+
+      containerWidth = container.clientWidth;
+      containerHeight = container.clientHeight;
+      //renderer oluşturma
+      const renderer = new THREE.WebGLRenderer({ antialiasing: true });
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setSize(containerWidth, containerHeight);
+      renderer.physicallyCorrectLights = false; //buna bakılacak.
+      renderer.setClearColor( 0xcccccc );
+      container.appendChild(renderer.domElement); //render olan alanı viewde görüntüleme.
+
+     //Arkaplan rengi
+
+      scene = new THREE.Scene();
+
+      camera = new THREE.PerspectiveCamera(90, containerWidth / containerHeight, 1, 10000);
+      camera.position.set(35, 5, 20);
+      camera.lookAt(new THREE.Vector3(0, 0, 0));
+
+
+
+      var orjColor = new THREE.Color(1,1,1),orjEmissive=new THREE.Color(0,0,0),orjEmissiveIntensity=1;
+      var mekanObj; //Modelden okunan Mesh obje dizisi.
+      const loader = new THREE.GLTFLoader();
+      loader.load('models/3.glb', function (glb) {
+          mekanObj = glb.scene.children;
+
+          etkinlikKoltuk.forEach(element => {
+            var obj = mekanObj.find(m=> m.id == element.Id);
+            if(obj != null)
+             changeMaterialColor(obj,new THREE.Color("red"));
+});
+
+          scene.add(glb.scene);
+
+      }, function (xhr) {
+          //console.log((xhr.loaded / xhr.total * 100) + "% yüklendi");
+      }, function (error) {
+          console.log("hata oluştu: " + error);
+      });
+
+
+
+
+      // User interaction
+      window.addEventListener('click', objeSecim, false);
+      window.addEventListener('resize', onWindowResize, false);//ekran boyutu değiştiğinde canvası değiştirir.
+
+      controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.autoRotate = false;
+    controls.autoRotateSpeed = -10;
+    controls.screenSpacePanning = true; //Mouse ile sahneyi çevirme
+      //controls.minDistance = 31;
+      //controls.maxDistance = 51;
+      //controls.minPolarAngle = 0; // radians
+      //controls.maxPolarAngle = 1.5; // radians
+      controls.update();
+
+      var freeControls = new THREE.FirstPersonControls( camera, renderer.domElement );
+      freeControls.movementSpeed = 150;
+      freeControls.lookSpeed = 0.1;
+
+
+    //   controls.addEventListener("change", event => {
+    //      console.log(controls.object.position);
+    //   });
+
+
+        const spotLight2 = new THREE.SpotLight( 0xffffff,2 );
+        spotLight2.position.set( 150,50,200 );
+        scene.add( spotLight2 );
+
+        const spotLight = new THREE.SpotLight( 0xffffff,1 );
+        spotLight.position.set( 100,50,0 );
+        scene.add( spotLight );
+
+        const light2 = new THREE.AmbientLight( 0x404040,5); // soft white light
+        // light2.position.set( 50, 50, 0.04677009582519531 );
+        scene.add( light2 );
+
+
+
+
+
+      // And go!
+      animate();
+
+      function objeSecim(e) {
+          if (e.button != 0) return;
+
+          //mouse konumu ve raycaster olmazsa olmaz!
+          var mouse = new THREE.Vector2();
+          mouse.x = (event.offsetX / containerWidth) * 2 - 1;
+          mouse.y = - (event.offsetY / containerHeight) * 2 + 1;
+
+          const raycaster = new THREE.Raycaster();
+          raycaster.setFromCamera(mouse, camera);
+
+          const intersects = raycaster.intersectObjects(mekanObj,false);//Kesişimi istenen objeleri parametre alır. Type=Mesh olan dizi.
+
+          if (intersects.length) {
+              if (intersects.length > 0) {
+                  var intersection = intersects[0],
+                      obj = intersection.object;
+                    if(new THREE.Color(obj.material.emissive).equals(new THREE.Color("green"))){
+                        changeMaterialColorDefault(obj);
+                    }
+                    else if(new THREE.Color(obj.material.emissive).equals(new THREE.Color("red"))){
+                        console.log("işlem yapılamaz");
+                    }
+                    else if(new THREE.Color(obj.material.emissive).equals(new THREE.Color("yellow"))){
+                        console.log("şuanda işlem görüyor");
+                    }
+                    else{
+                        changeMaterialColor(obj, new THREE.Color("green"));
+                    }
+
+                    console.log(obj);
+
+              }
+
+          }
+
+      }
+
+
+//change material color,emissiveIntensity function
+function changeMaterialColor(obj, emissive) {
+    obj.traverse(function (child) {
+        if (child.isMesh) {
+            child.material.color = new THREE.Color("white");
+            child.material.emissive = emissive;
+            child.material.emissiveIntensity = 0.7;
+        }
+    }
+    );
+}
+
+//change material default
+function changeMaterialColorDefault(obj) {
+    obj.traverse(function (child) {
+        if (child.isMesh) {
+            child.material.color = orjColor;
+            child.material.emissive = orjEmissive;
+            child.material.emissiveIntensity = orjEmissiveIntensity;
+        }
+    }
+    );
+}
+
+
+
+
+
+
+
+      function onWindowResize(e) {
+          containerWidth = container.clientWidth;
+          containerHeight = container.clientHeight;
+          renderer.setSize(containerWidth, containerHeight);
+          camera.aspect = containerWidth / containerHeight;
+          camera.updateProjectionMatrix();
+      }
+
+      function animate() {
+          requestAnimationFrame(animate);
+          renderer.render(scene, camera);
+      }
+
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,181 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <title>Oturma Plan</title>
+    <link href="/css/style.css" rel="stylesheet" />
+</head>
+<body>
+    <div id="container">
+    </div>
+
+    <script src="/js/three.min.js"></script>
+    <script src="/js/controls/OrbitControls.min.js"></script>
+    <script src="/js/loaders/GLTFLoader.min.js"></script>
+    <script>
+        var container = document.getElementById('container'),
+            containerWidth, containerHeight,
+            scene,
+            camera,
+            cubes,
+            geom,
+            range = 50,
+            axes,
+            controls;
+
+        containerWidth = container.clientWidth;
+        containerHeight = container.clientHeight;
+
+        //renderer oluşturma
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(containerWidth, containerHeight);
+        container.appendChild(renderer.domElement); //render olan alanı viewde görüntüleme.
+
+        renderer.setClearColor(new THREE.Color(0xeeeedd), 1.0);//Arkaplan rengi
+
+        scene = new THREE.Scene();
+
+        camera = new THREE.PerspectiveCamera(50, containerWidth / containerHeight, 1, 10000);
+        camera.position.set(0, 0, range * 2);
+        camera.lookAt(new THREE.Vector3(0, 0, 0));
+
+        
+
+        //Küp oluşturma
+        // geom = new THREE.BoxGeometry(5, 5, 5);
+
+        // var cubeObject = new THREE.Object3D(); //Küplerden oluşan mesh dizisi      
+        // for (var i = 0; i < 100; i++) {
+        //    var grayness = Math.random() * 0.5 + 0.25,
+        //        mat = new THREE.MeshBasicMaterial(),
+        //        cube = new THREE.Mesh(geom, mat);
+
+        //    mat.color.setRGB(grayness, grayness, grayness);
+        //    cube.position.set(range * (0.5 - Math.random()), range * (0.5 - Math.random()), range * (0.5 - Math.random()));
+        //    cube.rotation.set(Math.random(), Math.random(), Math.random());
+        //    cube.grayness = grayness;
+
+        //    cube.userData = { id: i, ad: "Ömer" };
+        //    cubeObject.add(cube);
+        // }
+        // scene.add(cubeObject);
+        
+
+        
+        var glbObject; //Modelden okunan Mesh obje dizisi.
+        const loader = new THREE.GLTFLoader();
+        loader.load('src/salon1.glb', function (glb) {
+            console.log(glb.scene);
+            glbObject = glb.scene;
+           
+            scene.add(glb.scene);
+            renderer.render(scene, camera);
+
+        }, function (xhr) {
+            console.log((xhr.loaded / xhr.total * 100) + "% yüklendi");
+        }, function (error) {
+            console.log("hata oluştu: " + error);
+        });
+        
+
+        //Axes
+        // axes = buildAxes();
+        // scene.add(axes);
+
+        // User interaction
+        window.addEventListener('click', objeSecim, false);
+        window.addEventListener('resize', onWindowResize, false);//ekran boyutu değiştiğinde canvası değiştirir.
+
+        controls = new THREE.OrbitControls(camera, renderer.domElement); //Mouse ile sahneyi çevirme
+
+        var light = new THREE.HemisphereLight(0xf6e86d, 0x404040, 0.5); //Işık
+        scene.add(light);
+
+
+
+        // And go!
+        animate();
+
+        function objeSecim(e) {
+
+            if (e.button != 0) return;
+
+            //mouse konumu ve raycaster olmazsa olmaz!
+            const mouse = new THREE.Vector2();
+            mouse.x = (event.clientX / containerWidth) * 2 - 1;
+            mouse.y = - (event.clientY / containerHeight) * 2 + 1;
+
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, camera);
+
+            const intersects = raycaster.intersectObjects(glbObject.children, false);//Kesişimi istenen objeleri parametre alır. Type=Mesh olan dizi.
+            if (intersects.length) {
+
+                if (intersects.length > 0) {
+                    var intersection = intersects[0],
+                        obj = intersection.object;
+if(obj.name != "Zemin"){
+    obj.material.color = new THREE.Color("blue");
+                    console.log(obj);
+}
+              
+                }
+
+            }
+
+        }
+
+        function onWindowResize(e) {
+            containerWidth = container.clientWidth;
+            containerHeight = container.clientHeight;
+            renderer.setSize(containerWidth, containerHeight);
+            camera.aspect = containerWidth / containerHeight;
+            camera.updateProjectionMatrix();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+
+
+
+        // function buildAxes() {
+        //     var axes = new THREE.Object3D();
+
+        //     axes.add(buildAxis(new THREE.Vector3(0, 0, 0), new THREE.Vector3(100, 0, 0), 0xFF0000, false)); // +X
+        //     axes.add(buildAxis(new THREE.Vector3(0, 0, 0), new THREE.Vector3(-100, 0, 0), 0x800000, true)); // -X
+        //     axes.add(buildAxis(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 100, 0), 0x00FF00, false)); // +Y
+        //     axes.add(buildAxis(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, -100, 0), 0x008000, true)); // -Y
+        //     axes.add(buildAxis(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, 100), 0x0000FF, false)); // +Z
+        //     axes.add(buildAxis(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -100), 0x000080, true)); // -Z
+
+        //     return axes;
+
+        // }
+
+        // function buildAxis(src, dst, colorHex, dashed) {
+        //     var geom = new THREE.Geometry(),
+        //         mat;
+
+        //     if (dashed) {
+        //         mat = new THREE.LineDashedMaterial({ linewidth: 1, color: colorHex, dashSize: 5, gapSize: 5 });
+        //     } else {
+        //         mat = new THREE.LineBasicMaterial({ linewidth: 1, color: colorHex });
+        //     }
+
+        //     geom.vertices.push(src.clone());
+        //     geom.vertices.push(dst.clone());
+
+        //     var axis = new THREE.Line(geom, mat);
+
+        //     return axis;
+
+        // }
+
+
+    </script>
+</body>
+</html>
